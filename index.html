@@ -12,6 +12,12 @@ content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable
 
 <title>AR Doll</title>
 
+<!-- Model Viewer -->
+<script
+type="module"
+src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js">
+</script>
+
 <style>
 
 * {
@@ -34,32 +40,83 @@ background: #000;
 font-family: Arial, sans-serif;
 }
 
-body {
-touch-action: none;
-}
-
-/*
-* Three.js canvas
-*/
-
-canvas {
-
-position: fixed;
-
-left: 0;
-top: 0;
+model-viewer {
 
 width: 100%;
 height: 100%;
 
-display: block;
-
-z-index: 1;
+background: transparent;
 }
 
-/*
-* Instruction
-*/
+/* =========================
+AR BUTTON
+========================= */
+
+#ar-button {
+
+position: absolute;
+
+left: 50%;
+bottom: 30px;
+
+transform: translateX(-50%);
+
+border: none;
+
+border-radius: 30px;
+
+padding: 16px 30px;
+
+background: white;
+
+color: #111;
+
+font-size: 17px;
+
+font-weight: bold;
+
+box-shadow:
+0 4px 20px rgba(0, 0, 0, 0.35);
+
+cursor: pointer;
+
+z-index: 10;
+}
+
+#ar-button:active {
+
+transform:
+translateX(-50%)
+scale(0.96);
+}
+
+/* =========================
+LOADING
+========================= */
+
+#loading {
+
+position: fixed;
+
+inset: 0;
+
+display: flex;
+
+justify-content: center;
+align-items: center;
+
+background: #000;
+
+color: white;
+
+font-size: 17px;
+
+z-index: 20;
+}
+
+/* =========================
+INSTRUCTION
+========================= */
 
 #instruction {
 
@@ -67,7 +124,7 @@ position: fixed;
 
 left: 50%;
 
-bottom: 70px;
+bottom: 100px;
 
 transform: translateX(-50%);
 
@@ -77,7 +134,7 @@ width: max-content;
 
 max-width: calc(100% - 40px);
 
-padding: 14px 25px;
+padding: 14px 24px;
 
 border-radius: 30px;
 
@@ -91,7 +148,7 @@ font-weight: bold;
 
 text-align: center;
 
-z-index: 10;
+z-index: 100;
 
 pointer-events: none;
 
@@ -100,34 +157,9 @@ backdrop-filter: blur(8px);
 -webkit-backdrop-filter: blur(8px);
 }
 
-/*
-* Loading
-*/
-
-#loading {
-
-position: fixed;
-
-inset: 0;
-
-display: flex;
-
-justify-content: center;
-
-align-items: center;
-
-background: #000;
-
-color: white;
-
-font-size: 17px;
-
-z-index: 20;
-}
-
-/*
-* Error
-*/
+/* =========================
+ERROR
+========================= */
 
 #error {
 
@@ -171,7 +203,25 @@ z-index: 30;
 
 </div>
 
-<!-- Instruction -->
+<!-- Error -->
+
+<div id="error">
+
+فایل سه‌بعدی قابل بارگذاری نیست.
+
+<br><br>
+
+مطمئن شوید فایل
+<b>doll.glb</b>
+در کنار
+<b>index.html</b>
+قرار دارد.
+
+</div>
+
+<!--
+Instruction shown when AR starts
+-->
 
 <div id="instruction">
 
@@ -179,442 +229,214 @@ z-index: 30;
 
 </div>
 
-<!-- Error -->
-
-<div id="error">
-
-اجرای واقعیت افزوده در این دستگاه امکان‌پذیر نیست.
-
-</div>
-
 <!--
-Three.js
+3D MODEL
 -->
 
-<script type="importmap">
-{
-"imports": {
-"three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
-}
-}
-</script>
+<model-viewer
 
-<script type="module">
+id="doll"
 
-import * as THREE from "three";
+src="./doll.glb"
 
-import { GLTFLoader }
-from "three/addons/loaders/GLTFLoader.js";
+alt="3D knitted doll"
+
+camera-controls
+
+ar
+
+ar-modes="webxr scene-viewer quick-look"
+
+ar-placement="floor"
+
+shadow-intensity="1"
+
+exposure="1"
+
+interaction-prompt="auto"
 
 /*
-* ==========================================
-* ELEMENTS
-* ==========================================
+* Initial view:
+* model faces the camera
 */
+
+camera-orbit="0deg 75deg 105%"
+
+/*
+* Animation runs only once
+*/
+
+animation-loop="false"
+
+>
+
+<!-- AR BUTTON -->
+
+<button
+id="ar-button"
+slot="ar-button"
+>
+
+📱 مشاهده در واقعیت افزوده
+
+</button>
+
+</model-viewer>
+
+<script>
+
+const modelViewer =
+document.getElementById("doll");
 
 const loading =
 document.getElementById("loading");
 
-const instruction =
-document.getElementById("instruction");
-
 const errorBox =
 document.getElementById("error");
 
-/*
-* ==========================================
-* THREE.JS
-* ==========================================
-*/
-
-const scene =
-new THREE.Scene();
-
-const camera =
-new THREE.PerspectiveCamera(
-70,
-window.innerWidth /
-window.innerHeight,
-0.01,
-100
-);
+const instruction =
+document.getElementById("instruction");
 
 /*
-* WebXR renderer
+* ============================
+* STATE
+* ============================
 */
 
-const renderer =
-new THREE.WebGLRenderer({
+let modelLoaded = false;
 
-antialias: true,
-
-alpha: true,
-
-powerPreference: "high-performance"
-
-});
-
-renderer.setPixelRatio(
-Math.min(window.devicePixelRatio, 2)
-);
-
-renderer.setSize(
-window.innerWidth,
-window.innerHeight
-);
-
-renderer.xr.enabled = true;
-
-renderer.xr.setReferenceSpaceType(
-"local-floor"
-);
-
-document.body.appendChild(
-renderer.domElement
-);
-
-/*
-* ==========================================
-* LIGHTING
-* ==========================================
-*
-* GLB materials need some light.
-*/
-
-const ambientLight =
-new THREE.HemisphereLight(
-0xffffff,
-0x444444,
-2
-);
-
-scene.add(ambientLight);
-
-const directionalLight =
-new THREE.DirectionalLight(
-0xffffff,
-2
-);
-
-directionalLight.position.set(
-2,
-4,
-2
-);
-
-scene.add(directionalLight);
-
-/*
-* ==========================================
-* MODEL
-* ==========================================
-*/
-
-let doll = null;
-
-let mixer = null;
-
-let animationClip = null;
+let arStarted = false;
 
 let animationStarted = false;
 
 /*
-* IMPORTANT:
+* ============================
+* MODEL LOADED
+* ============================
 *
-* The model is NOT added to the scene
-* until the user touches the screen.
+* DO NOT start animation here.
 */
 
-const loader =
-new GLTFLoader();
-
-loader.load(
-
-"./doll.glb",
-
-function (gltf) {
-
-doll =
-gltf.scene;
-
-/*
-* Model starts completely invisible.
-*/
-
-doll.visible = false;
-
-/*
-* Keep the original GLB
-* materials and textures.
-*/
-
-doll.traverse(
-function (object) {
-
-if (
-object.isMesh
-) {
-
-object.frustumCulled =
-false;
-
-}
-
-}
-);
-
-/*
-* Animation
-*/
-
-if (
-gltf.animations &&
-gltf.animations.length > 0
-) {
-
-mixer =
-new THREE.AnimationMixer(
-doll
-);
-
-/*
-* Use the first animation
-* contained in the GLB.
-*/
-
-animationClip =
-gltf.animations[0];
-
-}
-
-/*
-* We do NOT add the model
-* to the scene yet.
-*
-* Therefore the user cannot
-* see even its first frame.
-*/
-
-loading.style.display =
-"none";
-
-/*
-* Try to start AR immediately.
-*/
-
-startAR();
-
-},
-
-undefined,
-
-function (error) {
-
-console.error(
-"GLB loading error:",
-error
-);
-
-loading.style.display =
-"none";
-
-errorBox.style.display =
-"block";
-
-}
-
-);
-
-/*
-* ==========================================
-* START AR
-* ==========================================
-*/
-
-async function startAR() {
-
-/*
-* Check WebXR
-*/
-
-if (
-!navigator.xr
-) {
-
-showError();
-
-return;
-
-}
-
-try {
-
-const supported =
-await navigator.xr.isSessionSupported(
-"immersive-ar"
-);
-
-if (!supported) {
-
-showError();
-
-return;
-
-}
-
-/*
-* Request AR session.
-*
-* The browser/OS controls
-* its own permission prompt.
-*/
-
-const session =
-await navigator.xr.requestSession(
-"immersive-ar",
-{
-
-requiredFeatures: [
-"local-floor"
- ],
-
-optionalFeatures: [
-"dom-overlay"
- ],
-
-domOverlay: {
-root: document.body
-}
-
-}
-);
-
-/*
-* Start WebXR
-*/
-
-await renderer.xr.setSession(
-session
-);
-
-/*
-* AR is now running.
-*/
-
-instruction.style.display =
-"block";
-
-/*
-* Model is STILL hidden.
-*/
-
-if (doll) {
-
-doll.visible =
-false;
-
-}
-
-/*
-* When AR ends
-*/
-
-session.addEventListener(
-"end",
+modelViewer.addEventListener(
+"load",
 function () {
 
-instruction.style.display =
-"none";
+modelLoaded = true;
 
-animationStarted =
-false;
-
-if (doll) {
-
-doll.visible =
-false;
-
-scene.remove(
-doll
-);
-
-}
-
-}
-);
-
-}
-catch (error) {
-
-console.error(
-"Unable to start WebXR:",
-error
-);
+loading.style.display = "none";
 
 /*
-* This normally happens when
-* the browser requires a user
-* gesture before requestSession().
+* Stop animation immediately.
 */
 
-showError();
-
-}
-
-}
+modelViewer.pause();
 
 /*
-* ==========================================
-* USER TOUCH
-* ==========================================
+* Put animation at its
+* very first frame.
+*/
+
+modelViewer.currentTime = 0;
+
+/*
+* Initial model orientation.
 *
-* The model becomes visible ONLY
-* after the first touch.
+* The model starts facing
+* the viewer.
 */
 
-window.addEventListener(
-"touchstart",
-showModelAndStartAnimation,
-{
-passive: true,
-once: true
+modelViewer.cameraOrbit =
+"0deg 75deg 105%";
+
 }
 );
 
-window.addEventListener(
-"click",
-showModelAndStartAnimation,
-{
-once: true
+/*
+* ============================
+* MODEL ERROR
+* ============================
+*/
+
+modelViewer.addEventListener(
+"error",
+function () {
+
+loading.style.display = "none";
+
+errorBox.style.display = "block";
+
 }
 );
 
-function showModelAndStartAnimation() {
-
 /*
-* If model hasn't loaded,
-* do nothing.
+* ============================
+* AR STATUS
+* ============================
 */
 
-if (!doll) {
+modelViewer.addEventListener(
+"ar-status",
+function (event) {
 
-return;
+const status =
+event.detail.status;
 
-}
+console.log(
+"AR status:",
+status
+);
 
 /*
-* If AR isn't running,
-* do nothing.
+* ========================
+* AR STARTED
+* ========================
 */
 
 if (
-!renderer.xr.isPresenting
+status === "session-started" ||
+status === "presenting"
 ) {
 
-return;
+arStarted = true;
+
+animationStarted = false;
+
+/*
+* IMPORTANT:
+*
+* Animation remains stopped.
+*/
+
+modelViewer.pause();
+
+/*
+* Start from first frame.
+*/
+
+modelViewer.currentTime = 0;
+
+/*
+* Show instruction.
+*/
+
+instruction.style.display =
+"block";
 
 }
+
+/*
+* ========================
+* AR ENDED
+* ========================
+*/
+
+if (
+status === "not-presenting"
+) {
+
+arStarted = false;
+
+animationStarted = false;
 
 /*
 * Hide instruction.
@@ -624,208 +446,79 @@ instruction.style.display =
 "none";
 
 /*
-* ======================================
-* MODEL POSITION
-* ======================================
+* Reset animation.
+*/
+
+modelViewer.pause();
+
+modelViewer.currentTime = 0;
+
+}
+
+}
+);
+
+/*
+* ============================
+* USER TOUCH
+* ============================
 *
-* Put the doll approximately
-* 1 meter in front of the viewer.
+* The first touch after AR starts
+* starts the animation.
 */
 
-const xrCamera =
-renderer.xr.getCamera(
-camera
-);
-
-const direction =
-new THREE.Vector3(
-0,
-0,
--1
-);
-
-direction.applyQuaternion(
-xrCamera.quaternion
-);
-
-/*
-* Put model 1 meter forward.
-*/
-
-doll.position.copy(
-xrCamera.position
-);
-
-doll.position.add(
-direction.multiplyScalar(1)
-);
-
-/*
-* Put model on approximately
-* the same vertical level.
-*/
-
-doll.position.y =
-xrCamera.position.y;
-
-/*
-* Make model face the viewer.
-*/
-
-const lookPosition =
-new THREE.Vector3();
-
-lookPosition.copy(
-xrCamera.position
-);
-
-lookPosition.y =
-doll.position.y;
-
-doll.lookAt(
-lookPosition
-);
-
-/*
-* ======================================
-* SHOW MODEL
-* ======================================
-*/
-
-doll.visible =
-true;
-
-scene.add(
-doll
-);
-
-/*
-* ======================================
-* START ANIMATION
-* ======================================
-*/
-
-if (
-mixer &&
-animationClip &&
-!animationStarted
-) {
-
-animationStarted =
-true;
-
-/*
-* Start from frame zero.
-*/
-
-mixer.setTime(
-0
-);
-
-/*
-* Play ONLY ONCE.
-*/
-
-const action =
-mixer.clipAction(
-animationClip
-);
-
-action.reset();
-
-action.setLoop(
-THREE.LoopOnce,
-1
-);
-
-action.clampWhenFinished =
-true;
-
-action.play();
-
+document.addEventListener(
+"touchstart",
+startAnimation,
+{
+passive: true
 }
+);
+
+document.addEventListener(
+"click",
+startAnimation
+);
+
+function startAnimation() {
+
+/*
+* AR must already be active.
+*/
+
+if (!arStarted) {
+
+return;
 
 }
 
 /*
-* ==========================================
-* ANIMATION UPDATE
-* ==========================================
+* Don't start it again.
 */
 
-const clock =
-new THREE.Clock();
+if (animationStarted) {
 
-renderer.setAnimationLoop(
-function () {
-
-const delta =
-clock.getDelta();
-
-/*
-* Update GLB animation.
-*/
-
-if (
-mixer &&
-animationStarted
-) {
-
-mixer.update(
-delta
-);
+return;
 
 }
 
-/*
-* Render
-*/
-
-renderer.render(
-scene,
-camera
-);
-
-}
-);
+animationStarted = true;
 
 /*
-* ==========================================
-* RESIZE
-* ==========================================
+* Hide instruction.
 */
 
-window.addEventListener(
-"resize",
-function () {
-
-camera.aspect =
-window.innerWidth /
-window.innerHeight;
-
-camera.updateProjectionMatrix();
-
-renderer.setSize(
-window.innerWidth,
-window.innerHeight
-);
-
-}
-);
-
-/*
-* ==========================================
-* ERROR
-* ==========================================
-*/
-
-function showError() {
-
-loading.style.display =
+instruction.style.display =
 "none";
 
-errorBox.style.display =
-"block";
+/*
+* Start animation
+* from the beginning.
+*/
+
+modelViewer.currentTime = 0;
+
+modelViewer.play();
 
 }
 
