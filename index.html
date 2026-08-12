@@ -32,56 +32,33 @@ overflow: hidden;
 background: #000;
 
 font-family: Arial, sans-serif;
+}
 
+body {
 touch-action: none;
 }
 
 /*
-* دوربین معمولی مرورگر
-* فقط به عنوان تصویر پس‌زمینه
-* تا زمانی که WebXR شروع شود.
-*/
-
-#camera {
-
-position: fixed;
-
-inset: 0;
-
-width: 100%;
-height: 100%;
-
-object-fit: cover;
-
-transform: scaleX(-1);
-
-background: #000;
-
-display: none;
-
-z-index: 1;
-}
-
-/*
-* Canvas سه‌بعدی
+* Three.js canvas
 */
 
 canvas {
 
 position: fixed;
 
-inset: 0;
+left: 0;
+top: 0;
 
 width: 100%;
 height: 100%;
 
 display: block;
 
-z-index: 2;
+z-index: 1;
 }
 
 /*
-* راهنما
+* Instruction
 */
 
 #instruction {
@@ -89,6 +66,7 @@ z-index: 2;
 position: fixed;
 
 left: 50%;
+
 bottom: 70px;
 
 transform: translateX(-50%);
@@ -99,7 +77,7 @@ width: max-content;
 
 max-width: calc(100% - 40px);
 
-padding: 14px 24px;
+padding: 14px 25px;
 
 border-radius: 30px;
 
@@ -113,7 +91,7 @@ font-weight: bold;
 
 text-align: center;
 
-z-index: 20;
+z-index: 10;
 
 pointer-events: none;
 
@@ -123,7 +101,7 @@ backdrop-filter: blur(8px);
 }
 
 /*
-* فقط هنگام بارگذاری GLB
+* Loading
 */
 
 #loading {
@@ -134,14 +112,47 @@ inset: 0;
 
 display: flex;
 
-align-items: center;
 justify-content: center;
+
+align-items: center;
 
 background: #000;
 
 color: white;
 
 font-size: 17px;
+
+z-index: 20;
+}
+
+/*
+* Error
+*/
+
+#error {
+
+position: fixed;
+
+left: 20px;
+right: 20px;
+
+top: 50%;
+
+transform: translateY(-50%);
+
+display: none;
+
+padding: 22px;
+
+border-radius: 15px;
+
+background: white;
+
+color: #111;
+
+text-align: center;
+
+font-size: 16px;
 
 z-index: 30;
 }
@@ -152,24 +163,7 @@ z-index: 30;
 
 <body>
 
-<!-- دوربین -->
-
-<video
-id="camera"
-autoplay
-playsinline
-muted
-></video>
-
-<!-- راهنما -->
-
-<div id="instruction">
-
-برای ادامه صفحه را لمس کنید
-
-</div>
-
-<!-- بارگذاری -->
+<!-- Loading -->
 
 <div id="loading">
 
@@ -177,22 +171,33 @@ muted
 
 </div>
 
-<!-- Three.js -->
+<!-- Instruction -->
+
+<div id="instruction">
+
+برای ادامه صفحه را لمس کنید
+
+</div>
+
+<!-- Error -->
+
+<div id="error">
+
+اجرای واقعیت افزوده در این دستگاه امکان‌پذیر نیست.
+
+</div>
+
+<!--
+Three.js
+-->
 
 <script type="importmap">
-
 {
 "imports": {
-
-"three":
-"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-
-"three/addons/":
-"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
-
+"three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
 }
 }
-
 </script>
 
 <script type="module">
@@ -200,29 +205,27 @@ muted
 import * as THREE from "three";
 
 import { GLTFLoader }
-
-from
-"three/addons/loaders/GLTFLoader.js";
+from "three/addons/loaders/GLTFLoader.js";
 
 /*
-* =========================================
+* ==========================================
 * ELEMENTS
-* =========================================
+* ==========================================
 */
-
-const video =
-document.getElementById("camera");
-
-const instruction =
-document.getElementById("instruction");
 
 const loading =
 document.getElementById("loading");
 
+const instruction =
+document.getElementById("instruction");
+
+const errorBox =
+document.getElementById("error");
+
 /*
-* =========================================
+* ==========================================
 * THREE.JS
-* =========================================
+* ==========================================
 */
 
 const scene =
@@ -230,17 +233,16 @@ new THREE.Scene();
 
 const camera =
 new THREE.PerspectiveCamera(
-
 70,
-
 window.innerWidth /
 window.innerHeight,
-
 0.01,
-
 100
-
 );
+
+/*
+* WebXR renderer
+*/
 
 const renderer =
 new THREE.WebGLRenderer({
@@ -249,25 +251,17 @@ antialias: true,
 
 alpha: true,
 
-powerPreference:
-"high-performance"
+powerPreference: "high-performance"
 
 });
 
 renderer.setPixelRatio(
-
-Math.min(
-window.devicePixelRatio,
-2
-)
-
+Math.min(window.devicePixelRatio, 2)
 );
 
 renderer.setSize(
-
 window.innerWidth,
 window.innerHeight
-
 );
 
 renderer.xr.enabled = true;
@@ -276,56 +270,45 @@ renderer.xr.setReferenceSpaceType(
 "local-floor"
 );
 
-renderer.domElement.style.display =
-"none";
-
 document.body.appendChild(
 renderer.domElement
 );
 
 /*
-* =========================================
-* LIGHTS
-* =========================================
+* ==========================================
+* LIGHTING
+* ==========================================
+*
+* GLB materials need some light.
 */
 
 const ambientLight =
 new THREE.HemisphereLight(
-
 0xffffff,
 0x444444,
 2
-
 );
 
-scene.add(
-ambientLight
-);
+scene.add(ambientLight);
 
 const directionalLight =
 new THREE.DirectionalLight(
-
 0xffffff,
 2
-
 );
 
 directionalLight.position.set(
-
 2,
 4,
 2
-
 );
 
-scene.add(
-directionalLight
-);
+scene.add(directionalLight);
 
 /*
-* =========================================
-* MODEL VARIABLES
-* =========================================
+* ==========================================
+* MODEL
+* ==========================================
 */
 
 let doll = null;
@@ -336,26 +319,11 @@ let animationClip = null;
 
 let animationStarted = false;
 
-let arSession = null;
-
-let cameraStream = null;
-
-let arIsRunning = false;
-
 /*
-* =========================================
-* MODEL SCALE
-* =========================================
+* IMPORTANT:
 *
-* نصف اندازه‌ی فایل GLB اصلی
-*/
-
-const DOLL_SCALE = 0.5;
-
-/*
-* =========================================
-* LOAD GLB
-* =========================================
+* The model is NOT added to the scene
+* until the user touches the screen.
 */
 
 const loader =
@@ -371,33 +339,38 @@ doll =
 gltf.scene;
 
 /*
-* مدل کاملاً مخفی است.
+* Model starts completely invisible.
 */
 
-doll.visible =
-false;
+doll.visible = false;
 
 /*
-* نصف اندازه‌ی اصلی
+* Keep the original GLB
+* materials and textures.
 */
 
-doll.scale.set(
+doll.traverse(
+function (object) {
 
-DOLL_SCALE,
-DOLL_SCALE,
-DOLL_SCALE
+if (
+object.isMesh
+) {
 
+object.frustumCulled =
+false;
+
+}
+
+}
 );
 
 /*
-* Animation Mixer
+* Animation
 */
 
 if (
-
 gltf.animations &&
 gltf.animations.length > 0
-
 ) {
 
 mixer =
@@ -406,7 +379,8 @@ doll
 );
 
 /*
-* اولین Animation داخل GLB
+* Use the first animation
+* contained in the GLB.
 */
 
 animationClip =
@@ -415,21 +389,21 @@ gltf.animations[0];
 }
 
 /*
-* مدل هنوز به Scene اضافه نمی‌شود.
+* We do NOT add the model
+* to the scene yet.
 *
-* بنابراین کاربر حتی یک فریم
-* از آن نمی‌بیند.
+* Therefore the user cannot
+* see even its first frame.
 */
 
 loading.style.display =
 "none";
 
 /*
-* حالا درخواست دوربین
-* از خود مرورگر
+* Try to start AR immediately.
 */
 
-requestCamera();
+startAR();
 
 },
 
@@ -438,121 +412,37 @@ undefined,
 function (error) {
 
 console.error(
-"GLB error:",
+"GLB loading error:",
 error
 );
 
-loading.textContent =
-"خطا در بارگذاری فایل doll.glb";
+loading.style.display =
+"none";
+
+errorBox.style.display =
+"block";
 
 }
 
 );
 
 /*
-* =========================================
-* REQUEST CAMERA
-* =========================================
-*
-* پنجره Permission را خود مرورگر
-* مدیریت می‌کند.
-*/
-
-async function requestCamera() {
-
-if (
-!navigator.mediaDevices ||
-!navigator.mediaDevices.getUserMedia
-) {
-
-startAR();
-
-return;
-
-}
-
-try {
-
-cameraStream =
-await navigator.mediaDevices.getUserMedia({
-
-video: {
-
-facingMode: {
-ideal: "environment"
-}
-
-},
-
-audio: false
-
-});
-
-/*
-* دوربین باز شد.
-*/
-
-video.srcObject =
-cameraStream;
-
-video.style.display =
-"block";
-
-await video.play();
-
-/*
-* راهنما
-*/
-
-instruction.style.display =
-"block";
-
-/*
-* تلاش برای شروع مستقیم AR
-*/
-
-startAR();
-
-}
-
-catch (error) {
-
-console.log(
-"Camera permission:",
-error
-);
-
-/*
-* حتی اگر Permission دوربین
-* رد شود، صفحه‌ی اضافه‌ای
-* از طرف ما ساخته نمی‌شود.
-*/
-
-instruction.style.display =
-"block";
-
-}
-
-}
-
-/*
-* =========================================
-* START WEBXR AR
-* =========================================
+* ==========================================
+* START AR
+* ==========================================
 */
 
 async function startAR() {
+
+/*
+* Check WebXR
+*/
 
 if (
 !navigator.xr
 ) {
 
-/*
-* WebXR پشتیبانی نمی‌شود.
-*
-* در این حالت دوربین معمولی
-* همچنان باز است.
-*/
+showError();
 
 return;
 
@@ -567,24 +457,22 @@ await navigator.xr.isSessionSupported(
 
 if (!supported) {
 
+showError();
+
 return;
 
 }
 
 /*
-* تلاش برای ورود مستقیم به AR.
+* Request AR session.
 *
-* اگر مرورگر user activation
-* بخواهد، این درخواست رد می‌شود
-* و لمس راهنما دوباره آن را
-* امتحان خواهد کرد.
+* The browser/OS controls
+* its own permission prompt.
 */
 
-arSession =
+const session =
 await navigator.xr.requestSession(
-
 "immersive-ar",
-
 {
 
 requiredFeatures: [
@@ -596,55 +484,45 @@ optionalFeatures: [
  ],
 
 domOverlay: {
-
 root: document.body
-
 }
 
 }
-
 );
+
+/*
+* Start WebXR
+*/
 
 await renderer.xr.setSession(
-arSession
+session
 );
 
 /*
-* WebXR حالا تصویر دوربین
-* خودش را مدیریت می‌کند.
+* AR is now running.
 */
-
-arIsRunning =
-true;
-
-video.style.display =
-"none";
-
-renderer.domElement.style.display =
-"block";
-
-/*
-* مدل هنوز مخفی است.
-*/
-
-doll.visible =
-false;
 
 instruction.style.display =
 "block";
 
 /*
-* وقتی AR بسته شود
+* Model is STILL hidden.
 */
 
-arSession.addEventListener(
+if (doll) {
 
-"end",
-
-function () {
-
-arIsRunning =
+doll.visible =
 false;
+
+}
+
+/*
+* When AR ends
+*/
+
+session.addEventListener(
+"end",
+function () {
 
 instruction.style.display =
 "none";
@@ -664,127 +542,94 @@ doll
 }
 
 }
-
 );
 
 }
-
 catch (error) {
 
-/*
-* اگر مرورگر به دلیل نبودن
-* user activation اجازه نداد،
-* چیزی به کاربر نشان نمی‌دهیم.
-*
-* دوربین معمولی و راهنما
-* همچنان روی صفحه هستند.
-*/
-
-console.log(
-"WebXR waiting for touch:",
+console.error(
+"Unable to start WebXR:",
 error
 );
 
+/*
+* This normally happens when
+* the browser requires a user
+* gesture before requestSession().
+*/
+
+showError();
+
 }
 
 }
 
 /*
-* =========================================
-* TOUCH
-* =========================================
+* ==========================================
+* USER TOUCH
+* ==========================================
+*
+* The model becomes visible ONLY
+* after the first touch.
 */
 
-document.addEventListener(
+window.addEventListener(
+"touchstart",
+showModelAndStartAnimation,
+{
+passive: true,
+once: true
+}
+);
 
-"pointerdown",
+window.addEventListener(
+"click",
+showModelAndStartAnimation,
+{
+once: true
+}
+);
 
-async function () {
+function showModelAndStartAnimation() {
 
 /*
-* اگر AR هنوز شروع نشده،
-* همین لمس برای شروع آن استفاده شود.
+* If model hasn't loaded,
+* do nothing.
 */
 
-if (!arIsRunning) {
-
-try {
-
-await startAR();
-
-}
-
-catch (error) {
-
-console.log(error);
-
-}
-
-/*
-* اگر همین لمس باعث شروع AR شد،
-* ادامه بده.
-*/
-
-if (!arIsRunning) {
+if (!doll) {
 
 return;
 
 }
 
+/*
+* If AR isn't running,
+* do nothing.
+*/
+
+if (
+!renderer.xr.isPresenting
+) {
+
+return;
+
 }
 
 /*
-* راهنما را مخفی کن.
+* Hide instruction.
 */
 
 instruction.style.display =
 "none";
 
 /*
-* مدل را نشان بده.
-*/
-
-showDoll();
-
-},
-
-{
-passive: true
-}
-
-);
-
-/*
-* =========================================
-* SHOW DOLL
-* =========================================
-*/
-
-function showDoll() {
-
-if (
-!doll ||
-!arIsRunning
-) {
-
-return;
-
-}
-
-/*
-* جلوگیری از شروع دوباره
-*/
-
-if (
-animationStarted
-) {
-
-return;
-
-}
-
-/*
-* دوربین XR
+* ======================================
+* MODEL POSITION
+* ======================================
+*
+* Put the doll approximately
+* 1 meter in front of the viewer.
 */
 
 const xrCamera =
@@ -792,127 +637,106 @@ renderer.xr.getCamera(
 camera
 );
 
-/*
-* جهت جلوی دوربین
-*/
-
-const forward =
+const direction =
 new THREE.Vector3(
-
 0,
 0,
 -1
-
 );
 
-forward.applyQuaternion(
-
+direction.applyQuaternion(
 xrCamera.quaternion
-
 );
 
 /*
-* مدل را یک متر جلوی مخاطب
-* قرار می‌دهیم.
+* Put model 1 meter forward.
 */
 
 doll.position.copy(
-
 xrCamera.position
-
 );
 
 doll.position.add(
-
-forward.multiplyScalar(1)
-
+direction.multiplyScalar(1)
 );
 
 /*
-* ارتفاع تقریباً برابر دوربین
+* Put model on approximately
+* the same vertical level.
 */
 
 doll.position.y =
 xrCamera.position.y;
 
 /*
-* مدل رو به مخاطب باشد.
+* Make model face the viewer.
 */
 
-const lookAt =
+const lookPosition =
 new THREE.Vector3();
 
-lookAt.copy(
-
+lookPosition.copy(
 xrCamera.position
-
 );
 
-lookAt.y =
+lookPosition.y =
 doll.position.y;
 
 doll.lookAt(
-lookAt
+lookPosition
 );
 
 /*
-* اضافه کردن مدل به Scene
+* ======================================
+* SHOW MODEL
+* ======================================
 */
+
+doll.visible =
+true;
 
 scene.add(
 doll
 );
 
 /*
-* مدل الآن ظاهر شود.
-*/
-
-doll.visible =
-true;
-
-/*
-* =====================================
-* ANIMATION
-* =====================================
+* ======================================
+* START ANIMATION
+* ======================================
 */
 
 if (
-
 mixer &&
-animationClip
-
+animationClip &&
+!animationStarted
 ) {
 
 animationStarted =
 true;
+
+/*
+* Start from frame zero.
+*/
+
+mixer.setTime(
+0
+);
+
+/*
+* Play ONLY ONCE.
+*/
 
 const action =
 mixer.clipAction(
 animationClip
 );
 
-/*
-* از ابتدا
-*/
-
 action.reset();
 
-/*
-* فقط یک بار
-*/
-
 action.setLoop(
-
 THREE.LoopOnce,
-
 1
-
 );
-
-/*
-* بعد از پایان روی فریم آخر
-* باقی بماند.
-*/
 
 action.clampWhenFinished =
 true;
@@ -924,26 +748,27 @@ action.play();
 }
 
 /*
-* =========================================
-* RENDER LOOP
-* =========================================
+* ==========================================
+* ANIMATION UPDATE
+* ==========================================
 */
 
 const clock =
 new THREE.Clock();
 
 renderer.setAnimationLoop(
-
 function () {
 
 const delta =
 clock.getDelta();
 
-if (
+/*
+* Update GLB animation.
+*/
 
+if (
 mixer &&
 animationStarted
-
 ) {
 
 mixer.update(
@@ -952,27 +777,26 @@ delta
 
 }
 
-renderer.render(
+/*
+* Render
+*/
 
+renderer.render(
 scene,
 camera
-
 );
 
 }
-
 );
 
 /*
-* =========================================
+* ==========================================
 * RESIZE
-* =========================================
+* ==========================================
 */
 
 window.addEventListener(
-
 "resize",
-
 function () {
 
 camera.aspect =
@@ -982,15 +806,28 @@ window.innerHeight;
 camera.updateProjectionMatrix();
 
 renderer.setSize(
-
 window.innerWidth,
 window.innerHeight
-
 );
 
 }
-
 );
+
+/*
+* ==========================================
+* ERROR
+* ==========================================
+*/
+
+function showError() {
+
+loading.style.display =
+"none";
+
+errorBox.style.display =
+"block";
+
+}
 
 </script>
 
