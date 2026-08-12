@@ -519,7 +519,13 @@ instruction.style.display =
 modelViewer.currentTime = 0;
 
 modelViewer.play();
-
+modelViewer.addEventListener(
+"animation-finished",
+function () {
+modelViewer.pause();
+},
+{ once: true }
+);
 }
 
 </script>
