@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
+
 <head>
+
 <meta charset="UTF-8">
 
 <meta
@@ -8,134 +10,238 @@ name="viewport"
 content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
 >
 
-<title>My AR Doll</title>
+<title>AR Doll</title>
 
-<!-- Google Model Viewer -->
+<!-- Model Viewer -->
 <script
 type="module"
 src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js">
 </script>
 
 <style>
+
 * {
 box-sizing: border-box;
 }
 
 html,
 body {
+
 width: 100%;
 height: 100%;
+
 margin: 0;
 padding: 0;
+
 overflow: hidden;
+
 background: #000;
+
+font-family: Arial, sans-serif;
 }
 
 model-viewer {
+
 width: 100%;
 height: 100%;
+
 background: transparent;
 }
 
-/* AR button */
+/* =========================
+AR BUTTON
+========================= */
+
 #ar-button {
+
 position: absolute;
+
 left: 50%;
 bottom: 30px;
+
 transform: translateX(-50%);
 
 border: none;
+
 border-radius: 30px;
 
-padding: 15px 28px;
+padding: 16px 30px;
 
-background: rgba(255, 255, 255, 0.95);
+background: white;
+
 color: #111;
 
-font-size: 16px;
-font-family: Arial, sans-serif;
+font-size: 17px;
+
 font-weight: bold;
 
-box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+box-shadow:
+0 4px 20px rgba(0, 0, 0, 0.35);
 
 cursor: pointer;
+
 z-index: 10;
 }
 
 #ar-button:active {
-transform: translateX(-50%) scale(0.96);
+
+transform:
+translateX(-50%)
+scale(0.96);
 }
 
-/* Loading screen */
+/* =========================
+LOADING
+========================= */
+
 #loading {
+
 position: fixed;
+
 inset: 0;
 
 display: flex;
+
 justify-content: center;
 align-items: center;
 
 background: #000;
+
 color: white;
 
-font-family: Arial, sans-serif;
-font-size: 16px;
+font-size: 17px;
 
 z-index: 20;
 }
 
-#error {
+/* =========================
+INSTRUCTION
+========================= */
+
+#instruction {
+
 position: fixed;
+
+left: 50%;
+
+bottom: 100px;
+
+transform: translateX(-50%);
+
+display: none;
+
+width: max-content;
+
+max-width: calc(100% - 40px);
+
+padding: 14px 24px;
+
+border-radius: 30px;
+
+background: rgba(0, 0, 0, 0.72);
+
+color: white;
+
+font-size: 17px;
+
+font-weight: bold;
+
+text-align: center;
+
+z-index: 100;
+
+pointer-events: none;
+
+backdrop-filter: blur(8px);
+
+-webkit-backdrop-filter: blur(8px);
+}
+
+/* =========================
+ERROR
+========================= */
+
+#error {
+
+position: fixed;
+
 left: 20px;
 right: 20px;
+
 top: 50%;
+
 transform: translateY(-50%);
 
 display: none;
 
-padding: 20px;
+padding: 22px;
 
 border-radius: 15px;
 
-background: rgba(255,255,255,0.95);
+background: white;
+
 color: #111;
 
 text-align: center;
-font-family: Arial, sans-serif;
+
+font-size: 16px;
 
 z-index: 30;
 }
+
 </style>
+
 </head>
 
 <body>
 
 <!-- Loading -->
+
 <div id="loading">
-Loading 3D model...
+
+در حال بارگذاری...
+
 </div>
 
 <!-- Error -->
+
 <div id="error">
-Unable to load the 3D model.
+
+فایل سه‌بعدی قابل بارگذاری نیست.
+
 <br><br>
-Please check your internet connection.
+
+مطمئن شوید فایل
+<b>doll.glb</b>
+در کنار
+<b>index.html</b>
+قرار دارد.
+
+</div>
+
+<!--
+Instruction shown when AR starts
+-->
+
+<div id="instruction">
+
+برای ادامه صفحه را لمس کنید
+
 </div>
 
 <!--
 3D MODEL
-Replace "doll.glb" with the exact filename of your GLB file.
 -->
+
 <model-viewer
+
 id="doll"
 
 src="./doll.glb"
 
+alt="3D knitted doll"
+
 camera-controls
-
-autoplay
-
-animation-loop="once"
 
 ar
 
@@ -149,71 +255,266 @@ exposure="1"
 
 interaction-prompt="auto"
 
+/*
+* Initial view:
+* model faces the camera
+*/
+
 camera-orbit="0deg 75deg 105%"
 
-alt="3D knitted doll"
+/*
+* Animation runs only once
+*/
+
+animation-loop="false"
+
 >
 
-<!-- AR button -->
+<!-- AR BUTTON -->
+
 <button
 id="ar-button"
 slot="ar-button"
 >
-View in AR
+
+📱 مشاهده در واقعیت افزوده
+
 </button>
 
 </model-viewer>
 
 <script>
 
-const modelViewer = document.getElementById("doll");
-const loading = document.getElementById("loading");
-const errorBox = document.getElementById("error");
+const modelViewer =
+document.getElementById("doll");
+
+const loading =
+document.getElementById("loading");
+
+const errorBox =
+document.getElementById("error");
+
+const instruction =
+document.getElementById("instruction");
 
 /*
-* When the GLB has finished loading
+* ============================
+* STATE
+* ============================
 */
-modelViewer.addEventListener("load", () => {
+
+let modelLoaded = false;
+
+let arStarted = false;
+
+let animationStarted = false;
+
+/*
+* ============================
+* MODEL LOADED
+* ============================
+*
+* DO NOT start animation here.
+*/
+
+modelViewer.addEventListener(
+"load",
+function () {
+
+modelLoaded = true;
 
 loading.style.display = "none";
 
 /*
-* Start the animation contained inside the GLB.
-*
-* If your GLB contains only one animation,
-* model-viewer will automatically use it.
+* Stop animation immediately.
 */
-modelViewer.play();
 
-});
+modelViewer.pause();
 
 /*
-* If loading fails
+* Put animation at its
+* very first frame.
 */
-modelViewer.addEventListener("error", () => {
+
+modelViewer.currentTime = 0;
+
+/*
+* Initial model orientation.
+*
+* The model starts facing
+* the viewer.
+*/
+
+modelViewer.cameraOrbit =
+"0deg 75deg 105%";
+
+}
+);
+
+/*
+* ============================
+* MODEL ERROR
+* ============================
+*/
+
+modelViewer.addEventListener(
+"error",
+function () {
 
 loading.style.display = "none";
 
 errorBox.style.display = "block";
 
-});
+}
+);
 
 /*
-* When AR starts
+* ============================
+* AR STATUS
+* ============================
 */
-modelViewer.addEventListener("ar-status", (event) => {
 
-console.log("AR status:", event.detail.status);
+modelViewer.addEventListener(
+"ar-status",
+function (event) {
 
-});
+const status =
+event.detail.status;
+
+console.log(
+"AR status:",
+status
+);
 
 /*
-* When the user returns from AR,
-* play the animation again.
+* ========================
+* AR STARTED
+* ========================
 */
-modelViewer.addEventListener("ar-status", (event) => {
 
-if (event.detail.status === "not-presenting") {
+if (
+status === "session-started" ||
+status === "presenting"
+) {
+
+arStarted = true;
+
+animationStarted = false;
+
+/*
+* IMPORTANT:
+*
+* Animation remains stopped.
+*/
+
+modelViewer.pause();
+
+/*
+* Start from first frame.
+*/
+
+modelViewer.currentTime = 0;
+
+/*
+* Show instruction.
+*/
+
+instruction.style.display =
+"block";
+
+}
+
+/*
+* ========================
+* AR ENDED
+* ========================
+*/
+
+if (
+status === "not-presenting"
+) {
+
+arStarted = false;
+
+animationStarted = false;
+
+/*
+* Hide instruction.
+*/
+
+instruction.style.display =
+"none";
+
+/*
+* Reset animation.
+*/
+
+modelViewer.pause();
+
+modelViewer.currentTime = 0;
+
+}
+
+}
+);
+
+/*
+* ============================
+* USER TOUCH
+* ============================
+*
+* The first touch after AR starts
+* starts the animation.
+*/
+
+document.addEventListener(
+"touchstart",
+startAnimation,
+{
+passive: true
+}
+);
+
+document.addEventListener(
+"click",
+startAnimation
+);
+
+function startAnimation() {
+
+/*
+* AR must already be active.
+*/
+
+if (!arStarted) {
+
+return;
+
+}
+
+/*
+* Don't start it again.
+*/
+
+if (animationStarted) {
+
+return;
+
+}
+
+animationStarted = true;
+
+/*
+* Hide instruction.
+*/
+
+instruction.style.display =
+"none";
+
+/*
+* Start animation
+* from the beginning.
+*/
 
 modelViewer.currentTime = 0;
 
@@ -221,9 +522,8 @@ modelViewer.play();
 
 }
 
-});
-
 </script>
 
 </body>
+
 </html>
